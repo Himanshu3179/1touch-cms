@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  username      String         @unique
+  email         String         @unique
+  passwordHash  String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  adminArticles AdminArticle[]
+}
+
+model Article {
+  id              String                  @id @default(auto()) @map("_id") @db.ObjectId
+  sourceUrl       String                  @unique
+  title           String
+  content         String
+  author          String?
+  publicationDate DateTime?
+  scrapeDate      DateTime                @default(now())
+  summary         String?
+  keywords        ArticleKeyword[]
+  adminReferences AdminArticleReference[]
+}
+
+model Keyword {
+  id       String           @id @default(auto()) @map("_id") @db.ObjectId
+  keyword  String           @unique
+  articles ArticleKeyword[]
+}
+
+model ArticleKeyword {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  articleId String  @db.ObjectId
+  keywordId String  @db.ObjectId
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  keyword   Keyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, keywordId])
+}
+
+model AdminArticle {
+  id         String                  @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  content    String
+  authorId   String                  @db.ObjectId
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  author     User                    @relation(fields: [authorId], references: [id])
+  references AdminArticleReference[]
+}
+
+model AdminArticleReference {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  adminArticleId String       @db.ObjectId
+  articleId      String       @db.ObjectId
+  adminArticle   AdminArticle @relation(fields: [adminArticleId], references: [id], onDelete: Cascade)
+  article        Article      @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([adminArticleId, articleId])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
